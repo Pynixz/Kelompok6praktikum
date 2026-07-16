@@ -31,7 +31,12 @@ with st.sidebar:
     if algo == "Decision Tree":
         max_depth = st.slider("Max Depth", 1, 20, 5)
     else:
-        k = st.slider("Nilai K", 1, 21, 7, 2)
+        cari_k = st.checkbox("Cari K Terbaik Otomatis")
+        if cari_k:
+            st.caption("K akan dicari dari 1–21 (ganjil)")
+            k = 7
+        else:
+            k = st.slider("Nilai K", 1, 21, 7, 2)
 
     run = st.button("Jalankan Klasifikasi", type="primary")
 
@@ -81,6 +86,25 @@ if run:
         X_test_used = X_test
         feature_importances = model.feature_importances_
     else:
+        if cari_k:
+            k_range = range(1, 22, 2)
+            k_scores = []
+            for k_val in k_range:
+                knn = KNeighborsClassifier(n_neighbors=k_val, metric="euclidean")
+                knn.fit(X_train_scaled, y_train)
+                k_scores.append(accuracy_score(y_test, knn.predict(X_test_scaled)))
+            best_idx = np.argmax(k_scores)
+            k = k_range[best_idx]
+            st.success(f"K terbaik: **{k}** dengan akurasi **{k_scores[best_idx]:.2%}**")
+            fig_k, ax_k = plt.subplots(figsize=(8, 4))
+            ax_k.plot(list(k_range), k_scores, marker="o", linestyle="-", color="#2196F3")
+            ax_k.axvline(x=k, color="red", linestyle="--", label=f"K terbaik = {k}")
+            ax_k.set_xlabel("Nilai K")
+            ax_k.set_ylabel("Akurasi")
+            ax_k.set_title("Akurasi vs Nilai K")
+            ax_k.set_xticks(list(k_range))
+            ax_k.legend()
+            st.pyplot(fig_k)
         model = KNeighborsClassifier(n_neighbors=k, metric="euclidean")
         model.fit(X_train_scaled, y_train)
         y_pred = model.predict(X_test_scaled)
